@@ -8,9 +8,14 @@ using TMPro;
 
 public class PlayerController : MonoBehaviour
 {
-    public float speed = 3;
+    public float speed = 10f;
     public TextMeshProUGUI countText;
     public GameObject winTextObject;
+
+    public float speedUp = 2f;
+    private List<GameObject> speedUps;
+
+    public Vector3 StartPosition = new Vector3(0f, 2f, -38.5f);
     
     private Rigidbody rb;
 
@@ -18,14 +23,21 @@ public class PlayerController : MonoBehaviour
     private float movementX;
     private float movementY;
 
+    private bool inAir = false;
+
+    private bool winTextUp = false;
+    private 
+
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         count = 0;
         //reset/set text UI
-        SetCountText();
+        SetSpeedText();
         winTextObject.SetActive(false);
+
+        speedUps = new List<GameObject>();
     }
 
     void OnMove(InputValue movementValue) {
@@ -35,32 +47,77 @@ public class PlayerController : MonoBehaviour
         movementY = movementVector.y;
     }
 
-    void SetCountText() 
+    void SetSpeedText() 
     {
-        countText.text = "Count: " + count.ToString();
-        if (count >= 8) 
-        {
-            winTextObject.SetActive(true);
-        }
+        countText.text = "Speed: " + speed.ToString();
+        
     }
 
     void FixedUpdate() 
     {
-        Vector3 movement = new Vector3(movementX, 0.0f, movementY);
+        if (transform.position.y < -10f)
+        {
+            Restart();
+            return;
+        }
+
+        Vector3 movement;
+        if (inAir)
+        {
+            return;
+        }
+        if (movementY >= 0f)
+        {
+            movement = new Vector3(movementX, 0.0f, movementY);
+        } 
+        else 
+        {
+            movement = new Vector3(movementX, 0.0f, 0f);
+        }
 
         rb.AddForce(movement * speed);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("Collectible")) 
+        if (other.gameObject.CompareTag("Collectible"))
         {
+            speed += speedUp;
             other.gameObject.SetActive(false);
-            count += 1;
+            speedUps.Add(other.gameObject);
 
-            SetCountText();
+            SetSpeedText();
+
+            if (winTextUp && speed > 3f)
+            {
+                winTextObject.SetActive(false);
+                winTextUp = false;
+            }
+        }
+        else if (other.gameObject.CompareTag("Finish"))
+        {
+            inAir = true;
         }
     }
 
+    private void Restart()
+    {
+        foreach (GameObject g in speedUps)
+        {
+            g.SetActive(true);
+        }
 
+        speedUps.Clear();
+
+
+        winTextObject.SetActive(true);
+        winTextObject.GetComponent<TextMeshProUGUI>().text = Vector3.Distance(transform.position, StartPosition).ToString() + " m";
+        winTextUp = true;
+        transform.position = StartPosition;
+        speed = 3f;
+        inAir = false;
+        rb.isKinematic = true;
+        rb.isKinematic = false;
+
+    }
 }
